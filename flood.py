@@ -3,6 +3,8 @@
 from __future__ import division
 
 import sys
+import time
+import random
 import operator
 import textwrap
 
@@ -102,12 +104,46 @@ def user_input(board, current_group):
 	
 	return False
 
+def ai_solve(board):
+	"""Return a greedy solution for solving the board"""
+	# Stop if solved
+	if len(set(sum(board, []))) == 1:
+		return ''
+	
+	board_copy = [b[:] for b in board]
+	boards = {}
+	for c in '123456':
+		paint_cells(board_copy, adjacent_equal(board_copy), c)
+		boards[c] = board_copy
+		board_copy = [b[:] for b in board]
+	
+	# Choose the move that gets you the most cells this turn
+	m = max('123456', key=lambda c:len(adjacent_equal(boards[c])))
+	
+	return m + ai_solve(boards[m])
+
 def main(args):
 	if len(args) < 2:
-		sys.exit('Usage: ./flood boardfile.txt')
+		while True:
+			try:
+				size = input('What size of board would you like to play?\n> ')
+				break
+			except NameError:
+				print 'Please enter a number.'
+		
+		# Add 1 if even
+		size += not size % 2	
+		
+		board = []
+		
+		for i in range(size):
+			board.append([])
+			for j in range(size):
+				board[-1].append(random.choice('123456'))
 	
-	with open(args[1]) as f:
-		board = boardformat(f.read())
+	else:
+		with open(args[1]) as f:
+			board = boardformat(f.read())
 	
 	# Ensure that the input is a square with odd dimensions
 	if len(set(map(len, board) + [len(board)])) != 1:
@@ -118,9 +154,22 @@ def main(args):
 	sys.stdout.write('\033[2J')
 	moves = 0
 	
+	unsolved = [b[:] for b in board]
+	
+	try:
+		solution = ai_solve(board)
+	except RuntimeError:
+		solution = ''
+
 	# Game loop
 	while True:
 		sys.stdout.write('\033[H')
+		if solution:
+			print 'The computer solved it in {} moves.'.format(len(solution))
+			print 'Can you do better?'
+		else:
+			print 'The computer isn\'t smart enough to solve a board this large.'
+			print 'You\'re welcome to try, though!'
 		print boardstring(board)
 		current_group = adjacent_equal(board)
 		print textwrap.dedent("""\
@@ -129,8 +178,32 @@ def main(args):
 		                      moves, len(current_group)/(len(board)**2)*100))
 		# Break when every cell is the same
 		if len(set(sum(board, []))) == 1:
-			sys.exit('Congratulations!')
+			break
 		moves += user_input(board, current_group)
+	
+	print 'Congratulations!'
+	print
+	print 'You solved the puzzle in {} moves.'.format(moves)
+	if not solution:
+		sys.exit()
+	print 'The computer solved it in {} moves.'.format(len(solution))
+	print 'Your solution was {} moves {}.'.format(
+	abs(moves - len(solution)), 'faster' if moves <= len(solution) else 'slower')
+	print
+	print 'Press any key to watch the computer\'s solution.'
+	getch()
+	
+	sys.stdout.write('\033[2J')
+	board = unsolved
+	
+	for m in solution:
+		sys.stdout.write('\033[H')
+		print boardstring(board)
+		time.sleep(0.5)
+		paint_cells(board, adjacent_equal(board), m)
+
+	sys.stdout.write('\033[H')	
+	print boardstring(board)
 	
 if __name__ == '__main__':
 	main(sys.argv)
