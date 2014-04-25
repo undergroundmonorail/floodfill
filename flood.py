@@ -10,7 +10,7 @@ try:
 	# multiplatform ANSI colours
 	from colorama import init
 	init()
-except InputError:
+except ImportError:
 	# if they don't have colorama, that's fine
 	pass
 
