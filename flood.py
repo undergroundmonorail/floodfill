@@ -13,13 +13,12 @@ import platform
 # http://code.activestate.com/recipes/134892/
 from getch import *
 
+colour = True
 try:
 	# multiplatform ANSI colours
 	from colorama import init
 	init()
-	colour = True
 except ImportError:
-	colour = False
 	if platform.system() == 'Windows':
 		print textwrap.dedent("""\
 		                      Your system doesn't appear to support ANSI codes.
@@ -46,6 +45,7 @@ except ImportError:
 		                      this. The colours really are worth it.
 		                      
 		                      (c)ontinue? """)
+		colour = False
 		if getch() != 'c':
 			sys.exit()
 
@@ -84,11 +84,41 @@ def boardstring(board):
 	
 	return b[:-1]
 
-def adjacent_equal(board, value=None, y=None, x=None, matched=None):
+def adjacent_equal(board, value=None):
 	"""Returns the X, Y coordinates of each cell that neighbours the center cell
 	and shares its value, as well as the matching neighbours of those cells, and
 	so on
 	"""
+	value = board[len(board) // 2][len(board) // 2]
+	matched = [(len(board) // 2, len(board) // 2)]
+	
+	# list[-1] is the last element of the list. This means that lists will wrap
+	# going backwards, which is behaviour we don't want. A row of illegal
+	# characters is added to the end and a single illegal character is added to
+	# each row, so that board[-1][z] or board[z][-1] never matches
+	board = [row + ['X'] for row in board]
+	board.append(list('X'*len(board)))
+	
+	while True:
+		m = len(matched)
+		for y, row in enumerate(board):
+			for x, cell in enumerate(row):
+				if cell == value and (y, x) not in matched:
+					if filter(lambda c: c in matched, [(y+1,x),(y-1,x),(y,x+1),(y,x-1)]):
+						matched.append((y, x))
+		if len(matched) == m:
+			break
+	
+	return matched
+
+def adjacent_equal_old(board, value=None, y=None, x=None, matched=None):
+	"""Returns the X, Y coordinates of each cell that neighbours the center cell
+	and shares its value, as well as the matching neighbours of those cells, and
+	so on.
+	
+	I've changed how I want to do this but I'm keeping this one around. Just in
+	case."""
+	
 	# New contains each matching cell that this layer of depth found. Stored
 	# seperately so we don't get dupes
 	new = []
@@ -155,6 +185,7 @@ def ai_solve(board):
 	
 	# Choose the move that gets you the most cells this turn
 	m = max('123456', key=lambda c:len(adjacent_equal(boards[c])))
+	print boardstring(boards[m])
 	
 	return m + ai_solve(boards[m])
 
