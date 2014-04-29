@@ -2,22 +2,52 @@
 
 from __future__ import division
 
+import os
 import sys
 import time
 import random
 import operator
 import textwrap
+import platform
+
+# http://code.activestate.com/recipes/134892/
+from getch import *
 
 try:
 	# multiplatform ANSI colours
 	from colorama import init
 	init()
+	colour = True
 except ImportError:
-	# if they don't have colorama, that's fine
-	pass
-
-# http://code.activestate.com/recipes/134892/
-from getch import *
+	colour = False
+	if platform.system() == 'Windows':
+		print textwrap.dedent("""\
+		                      Your system doesn't appear to support ANSI codes.
+		                      ANSI codes are used heavily in this program to create
+		                      colour and clear the screen at appropriate times.
+		                      
+		                      The first is to press any key other than 'c' to quit.
+		                      This game isn't very good and probably isn't worth
+		                      your time.
+		                      
+		                      The second is to press 'c' now to continue playing
+		                      without ANSI codes. This will work, but it will be
+		                      ugly and hard to play.
+		                      
+		                      The final option is to press any key other than 'c',
+		                      quit the game and install the colorama python module.
+		                      This module is designed to allow ANSI codes to be
+		                      used on systems that don't natively support them.
+		                      The module can be found here:
+		                      
+		                      https://pypi.python.org/pypi/colorama
+		                      
+		                      If you really want to play this game, I'd reccomend
+		                      this. The colours really are worth it.
+		                      
+		                      (c)ontinue? """)
+		if getch() != 'c':
+			sys.exit()
 
 def boardformat(board):
 	"""Return the board converted to a list of rows, with non-digits and empty
@@ -28,23 +58,29 @@ def boardformat(board):
 def boardstring(board):
 	"""Return a string representing the board in a human-friendly way"""
 	
-	# Keys = strings reperesenting ints 1-6
-	# Values = ANSI colour code for that number
-	colour_dict = {
-	                '1' : '\033[47;30m',
-	                '2' : '\033[45;37m',
-	                '3' : '\033[44;37m',
-	                '4' : '\033[46;30m',
-	                '5' : '\033[43;30m',
-	                '6' : '\033[41;37m',
-	              }
+	if colour:
+		# Keys = strings reperesenting ints 1-6
+		# Values = ANSI colour code for that number
+		colour_dict = {
+		                '1' : '\033[47;30m',
+		                '2' : '\033[45;37m',
+		                '3' : '\033[44;37m',
+		                '4' : '\033[46;30m',
+		                '5' : '\033[43;30m',
+		                '6' : '\033[41;37m',
+		              }
+	else:
+		colour_dict = dict(zip('123456', ['']*6)) # No colours for non-ansi systems
 	
 	b = ''
 	for i, r in enumerate(board):
 		for j, e in enumerate(r):
 			b += colour_dict[e] + ('*' if i==j==len(board)//2 else ' ') + e
-				
-		b += '\033[0m\n'
+		
+		if colour:
+			b += '\033[0m'
+		
+		b += '\n'
 	
 	return b[:-1]
 
@@ -163,7 +199,11 @@ def main(args):
 
 	# Game loop
 	while True:
-		sys.stdout.write('\033[H')
+		if colour:
+			sys.stdout.write('\033[H')
+		else:
+			os.system('cls') # Non-ansi way to clear screen
+		
 		if solution:
 			print 'The computer solved it in {} moves.'.format(len(solution))
 			print 'Can you do better?'
@@ -193,16 +233,25 @@ def main(args):
 	print 'Press any key to watch the computer\'s solution.'
 	getch()
 	
-	sys.stdout.write('\033[2J')
+	if colour:
+		sys.stdout.write('\033[2J\033[H')
+	else:
+		os.system('cls') # Non-ansi way to clear screen
 	board = unsolved
 	
 	for m in solution:
-		sys.stdout.write('\033[H')
+		if colour:
+			sys.stdout.write('\033[H')
+		else:
+			os.system('cls') # Non-ansi way to clear screen
 		print boardstring(board)
 		time.sleep(0.5)
 		paint_cells(board, adjacent_equal(board), m)
 
-	sys.stdout.write('\033[H')	
+	if colour:
+		sys.stdout.write('\033[H')
+	else:
+		os.system('cls') # Non-ansi way to clear screen
 	print boardstring(board)
 	
 if __name__ == '__main__':
