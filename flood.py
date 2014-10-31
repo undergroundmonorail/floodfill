@@ -111,44 +111,6 @@ def adjacent_equal(board, value=None):
 	
 	return matched
 
-def adjacent_equal_old(board, value=None, y=None, x=None, matched=None):
-	"""Returns the X, Y coordinates of each cell that neighbours the center cell
-	and shares its value, as well as the matching neighbours of those cells, and
-	so on.
-	
-	I've changed how I want to do this but I'm keeping this one around. Just in
-	case."""
-	
-	# New contains each matching cell that this layer of depth found. Stored
-	# seperately so we don't get dupes
-	new = []
-	
-	# Setup for first iteration
-	if x is None:
-		x = len(board) // 2
-		y = len(board) // 2
-		
-		# list[-1] is the last element of the list. This means that lists will wrap
-		# going backwards, which is behaviour we don't want. A row of illegal
-		# characters is added to the end and a single illegal character is added to
-		# each row, so that board[-1][z] or board[z][-1] never matches
-		board = [row + ['X'] for row in board]
-		board.append(list('X'*len(board)))
-	
-		value = board[y][x]
-		matched = [(y, x)]
-		new = [(y, x)]
-		
-	# Coords of all neighbours
-	neighbours = [(y + n, x + m) for n, m in [(-1, 0), (0, 1), (1, 0), (0, -1)]]
-	for n, m in neighbours:
-		# Recurse for each matching neighbour, unless it's been done
-		if board[n][m] == value and (n, m) not in matched:
-			matched.append((n, m))
-			new += adjacent_equal(board, value, n, m, matched) + [(n, m)]
-	
-	return new
-
 def paint_cells(board, cells, value):
 	"""Set the specified cells on the board to the new value and return None."""
 	# Fail silently if input isn't 1-6
@@ -185,7 +147,6 @@ def ai_solve(board):
 	
 	# Choose the move that gets you the most cells this turn
 	m = max('123456', key=lambda c:len(adjacent_equal(boards[c])))
-	print boardstring(boards[m])
 	
 	return m + ai_solve(boards[m])
 
@@ -193,7 +154,7 @@ def main(args):
 	if len(args) < 2:
 		while True:
 			try:
-				size = input('What size of board would you like to play?\n> ')
+				size = int(raw_input('What size of board would you like to play?\n> '))
 				break
 			except NameError:
 				print 'Please enter a number.'
